@@ -10,6 +10,40 @@ let setChildTag=function(parent,child,name)
 		parent[name].push(child);
 	}
 };
+let processTag=function(tagStack,[type,data],useValues=false)
+{
+	switch(type)
+	{
+		case "start":
+		{
+			let obj = {
+				_name:data.name,
+				_raw:data
+			};
+			let parent=tagStack[0];
+			tagStack.unshift(obj);
+			if(parent) setChildTag(parent,obj,data.name);
+			break;
+		}
+		case "end":
+		{
+			let obj=tagStack.shift()
+			obj._rawEnd=data;
+			if(tagStack.length===0) return obj;
+			break;
+		}
+		case "tag":
+		{
+			let parent=tagStack[0];
+			let value=data;
+			if(useValues) value=data.value===undefined?Buffer.from(data.data).toString("hex"):data.value;
+			if(parent) setChildTag(parent,value,data.name);
+			else return data;
+			break;
+		}
+	}
+	return undefined;
+};
 
 let EbmlStructure = function (options = {})
 {
@@ -20,41 +54,26 @@ let EbmlStructure = function (options = {})
 };
 EbmlStructure.prototype=Object.assign(Object.create(Transform.prototype),
 {
-	_transform([type,data],enc,done)
+	constructor:EbmlStructure,
+	_transform(tag,enc,done)
 	{
-		switch(type)
-		{
-			case "start":
-			{
-				let obj = {
-					_name:data.name,
-					_raw:data
-				};
-				let parent=this.tagObjectStack[0];
-				this.tagObjectStack.unshift(obj);
-				if(parent) setChildTag(parent,obj,data.name);
-				break;
-			}
-			case "end":
-			{
-				let obj=this.tagObjectStack.shift()
-				if(this.tagObjectStack.length===0) this.push(obj);
-				break;
-			}
-			case "tag":
-			{
-				let parent=this.tagObjectStack[0];
-				let value=data;
-				if(this.useValues) value=data.value;
-				if(parent) setChildTag(parent,value,data.name);
-				else this.push(data);
-				break;
-			}
-		}
+		let obj=processTag(this.tagObjectStack,tag,this.useValues);
+		if(obj) this.push(obj);
 		done();
 	}
 });
 
+EbmlStructure.parse=function(tags,useValues=false)
+{
+	let stack=[];
+	let rtn=[];
+	for(let i=0,l=tags.length;i<l;i++)
+	{
+		let obj=processTag(stack,tags[i],useValues);
+		if(obj) rtn.push(obj);
+	}
+	return rtn;
+};
 EbmlStructure.wrapRoot=function(tags)
 {
 	return tags.reduce(function(root,tag)
@@ -64,4 +83,33 @@ EbmlStructure.wrapRoot=function(tags)
 	},{})
 };
 
+EbmlStructure.taggify=function(structure)
+{
+	let tags=[];
+	let isRoot=!("_name" in structure);
+	let todo=isRoot?Object.values(structure):[structure];
+	let step=todo[0];
+	while(step=todo.shift())
+	{
+		if(Array.isArray(step))
+		{
+			todo.unshift(...step);
+			continue;
+		}
+		if("_name" in step)
+		{
+			tags.push(["start",step._raw]);
+			let entries=Object.keys(step).filter(k=>!k.startsWith("_")).map(k=>step[k]);
+			tags.push(...EbmlStructure.taggify(entries));
+			tags.push(["end",step._rawEnd||step._raw]);
+		}
+		else
+		{
+			tags.push(["tag",step]);
+		}
+	}
+	return tags;
+}
+
 module.exports=EbmlStructure;
+

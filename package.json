@@ -1,0 +1,23 @@
+{
+  "name": "ebml-json",
+  "version": "1.0.0",
+  "description": "organizes the ebml tags in a json structure",
+  "main": "ebmlStructure.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Morgas01/ebml-json.git"
+  },
+  "keywords": [
+    "ebml",
+    "json"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Morgas01/ebml-json/issues"
+  },
+  "homepage": "https://github.com/Morgas01/ebml-json#readme"
+}
