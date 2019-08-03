@@ -74,13 +74,13 @@ EbmlStructure.parse=function(tags,useValues=false)
 	}
 	return rtn;
 };
-EbmlStructure.wrapRoot=function(tags)
+EbmlStructure.wrapRoot=function(roots)
 {
-	return tags.reduce(function(root,tag)
+	return roots.reduce(function(root,tag)
 	{
 		setChildTag(root,tag,tag._name);
 		return root;
-	},{})
+	},{});
 };
 
 EbmlStructure.taggify=function(structure)
